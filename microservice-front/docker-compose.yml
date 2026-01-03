@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  frontend:
+    container_name: tingeso-ms-frontend
+    # Usamos el mismo nombre de imagen que definimos para Jenkins y K8s
+    image: demishuaccha/frontend-service:latest
+    ports:
+      - "8070:80"
+    environment:
+      # Muy importante: El frontend necesita saber dónde está el Backend
+      # Si usas Minikube, aquí deberías poner la IP de minikube:puerto_gateway
+      - VITE_API_URL=http://localhost:8080
+    restart: on-failure
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:80" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  default:
+    name: tingeso-network

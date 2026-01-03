@@ -1,0 +1,80 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "demishuaccha/frontend-service"
+        IMAGE_TAG  = "latest"
+        DOCKER_CREDENTIAL_ID = 'dockerhub-creds'
+        FRONT_DIR = "microservice-front" // Asegúrate de que este sea el nombre real de tu carpeta
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: env.DOCKER_CREDENTIAL_ID, usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                        bat "docker login -u %USER% -p %PASS%"
+                    }
+                }
+            }
+        }
+
+        stage('Build Frontend') {
+            steps {
+                dir("${env.FRONT_DIR}") {
+                    bat "npm install"
+                    bat "npm run build"
+                }
+            }
+        }
+
+        stage('Build & Push Docker Image') {
+            steps {
+                script {
+                    // Construimos desde la raíz usando la carpeta como contexto
+                    bat "docker build -t ${env.IMAGE_NAME}:${env.IMAGE_TAG} ./${env.FRONT_DIR}"
+                    bat "docker push ${env.IMAGE_NAME}:${env.IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Deploy to Minikube') {
+            steps {
+                script {
+                    echo "--- Desplegando Infraestructura de Auth (Keycloak) ---"
+                    // 1. Primero la base de datos de Keycloak
+                    bat "kubectl apply -f k8s/keycloak-db.yml"
+                    
+                    // 2. El servidor de Keycloak
+                    bat "kubectl apply -f k8s/keycloak-deployment.yml"
+                    
+                    echo "--- Desplegando Aplicación Frontend ---"
+                    // 3. El Frontend propiamente tal
+                    bat "kubectl apply -f k8s/frontend-deployment.yml"
+                    
+                    echo "Esperando que los servicios estén listos..."
+                    // Esperamos a Keycloak (suele tardar más)
+                    bat "kubectl wait --for=condition=ready pod -l app=keycloak --timeout=180s"
+                    // Esperamos al Frontend
+                    bat "kubectl wait --for=condition=ready pod -l app=frontend-service --timeout=120s"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "¡Todo el ecosistema Frontend + Keycloak está Running!"
+            script { bat "docker logout" }
+        }
+        failure {
+            echo "El despliegue falló. Revisa los logs de kubectl."
+        }
+    }
+}

@@ -49,18 +49,15 @@ pipeline {
         stage('Deploy to Minikube') {
             steps {
                 script {
-                    // CRUCIAL: Entramos a la carpeta donde vive 'k8s'
+                    // Entramos a microservice-front donde está la carpeta k8s
                     dir("${env.FRONT_DIR}") {
-                        echo "--- Desplegando Infraestructura (Keycloak) ---"
-                        bat "kubectl apply -f k8s/keycloak-db.yml"
-                        bat "kubectl apply -f k8s/keycloak-deployment.yml"
-                        
-                        echo "--- Desplegando Frontend ---"
-                        bat "kubectl apply -f k8s/frontend-deployment.yml"
+                        echo "--- Aplicando TODA la configuración de k8s ---"
+                        // Al usar -f k8s/ aplicamos los 3 archivos de la imagen automáticamente
+                        bat "kubectl apply -f k8s/"
                     }
                     
-                    echo "--- Esperando salud de los pods ---"
-                    // Los waits se ejecutan fuera del dir porque kubectl consulta al clúster, no archivos locales
+                    echo "--- Esperando que los Pods estén listos ---"
+                    // Nota: Asegúrate que el label 'app' en keycloak-service.yml sea 'keycloak'
                     bat "kubectl wait --for=condition=ready pod -l app=keycloak --timeout=180s"
                     bat "kubectl wait --for=condition=ready pod -l app=frontend-service --timeout=120s"
                 }

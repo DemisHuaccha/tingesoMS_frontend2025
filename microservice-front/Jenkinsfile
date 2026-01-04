@@ -5,8 +5,10 @@ pipeline {
         IMAGE_NAME = "demishuaccha/frontend-service"
         IMAGE_TAG  = "latest"
         DOCKER_CREDENTIAL_ID = 'dockerhub-creds'
-        // Este nombre debe coincidir exactamente con tu carpeta en Git
         FRONT_DIR = "microservice-front" 
+        
+        // Definimos las IPs aquí para que sea fácil cambiarlas si tu Minikube cambia
+        MINIKUBE_IP = "192.168.59.104"
     }
 
     stages {
@@ -28,10 +30,18 @@ pipeline {
 
         stage('Build Frontend') {
             steps {
-                // Entramos a la carpeta para instalar y compilar
                 dir("${env.FRONT_DIR}") {
-                    bat "npm install"
-                    bat "npm run build"
+                    script {
+                        // Inyectamos las variables que Vite necesita durante el build
+                        withEnv([
+                            "VITE_KEYCLOAK_URL=http://${env.MINIKUBE_IP}:31000",
+                            "VITE_GATEWAY_URL=http://${env.MINIKUBE_IP}:30080"
+                        ]) {
+                            echo "--- Instalando dependencias y compilando con variables de entorno ---"
+                            bat "npm install"
+                            bat "npm run build"
+                        }
+                    }
                 }
             }
         }
@@ -39,7 +49,7 @@ pipeline {
         stage('Build & Push Docker Image') {
             steps {
                 script {
-                    // Construimos la imagen usando la carpeta como contexto
+                    // Al construir la imagen DESPUÉS del build, el 'dist' ya lleva las IPs grabadas
                     bat "docker build -t ${env.IMAGE_NAME}:${env.IMAGE_TAG} ./${env.FRONT_DIR}"
                     bat "docker push ${env.IMAGE_NAME}:${env.IMAGE_TAG}"
                 }
@@ -49,15 +59,15 @@ pipeline {
         stage('Deploy to Minikube') {
             steps {
                 script {
-                    // Entramos a microservice-front donde está la carpeta k8s
                     dir("${env.FRONT_DIR}") {
-                        echo "--- Aplicando TODA la configuración de k8s ---"
-                        // Al usar -f k8s/ aplicamos los 3 archivos de la imagen automáticamente
-                        bat "kubectl apply -f k8s/"
+                        echo "--- Aplicando configuración de k8s ---"
+                        bat "kubectl apply -f k8s/ --validate=false"
+                        
+                        echo "--- Forzando reinicio para actualizar imagen latest ---"
+                        bat "kubectl rollout restart deployment frontend-service"
                     }
                     
-                    echo "--- Esperando que los Pods estén listos ---"
-                    // Nota: Asegúrate que el label 'app' en keycloak-service.yml sea 'keycloak'
+                    echo "--- Esperando salud de los pods ---"
                     bat "kubectl wait --for=condition=ready pod -l app=keycloak --timeout=180s"
                     bat "kubectl wait --for=condition=ready pod -l app=frontend-service --timeout=120s"
                 }
@@ -67,11 +77,11 @@ pipeline {
 
     post {
         success {
-            echo "¡Despliegue exitoso!"
+            echo "¡Despliegue exitoso! Accede en http://${env.MINIKUBE_IP}:30000"
             script { bat "docker logout" }
         }
         failure {
-            echo "Fallo en el pipeline. Revisa que los nombres de los archivos .yml sean correctos."
+            echo "Fallo en el pipeline. Revisa los logs de construcción de npm o la conexión con el clúster."
         }
     }
 }

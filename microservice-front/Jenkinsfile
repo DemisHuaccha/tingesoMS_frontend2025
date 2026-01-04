@@ -36,8 +36,8 @@ pipeline {
                             "VITE_TINGESO_M_BACKEND_PORT=30080",
                             "VITE_TINGESO_M_BACKEND_SERVER=${env.MINIKUBE_IP}",
                             "VITE_KEYCLOAK_URL=http://${env.MINIKUBE_IP}:31000",
-                            "VITE_KEYCLOAK_REALM=tool_rent_M",
-                            "VITE_KEYCLOAK_CLIENT=mi-frontend"
+                            "VITE_KEYCLOAK_REALM=tingeso-realm",
+                            "VITE_KEYCLOAK_CLIENT=tingeso-front"
                         ]) {
                             echo "--- Instalando dependencias ---"
                             bat "npm install"

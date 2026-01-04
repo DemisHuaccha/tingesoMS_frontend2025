@@ -30,7 +30,6 @@ pipeline {
             steps {
                 dir("${env.FRONT_DIR}") {
                     script {
-                        // Aquí inyectamos EXACTAMENTE las variables de tu .env
                         withEnv([
                             "VITE_API_BASE_URL=http://${env.MINIKUBE_IP}:30080",
                             "VITE_TINGESO_M_BACKEND_PORT=30080",
@@ -41,7 +40,7 @@ pipeline {
                         ]) {
                             echo "--- Instalando dependencias ---"
                             bat "npm install"
-                            echo "--- Compilando (Las variables se graban en los archivos estáticos) ---"
+                            echo "--- Compilando frontend ---"
                             bat "npm run build"
                         }
                     }
@@ -52,8 +51,8 @@ pipeline {
         stage('Build & Push Docker Image') {
             steps {
                 script {
-                    // Se construye la imagen con el contenido de 'dist' ya generado
-                    bat "docker build -t ${env.IMAGE_NAME}:${env.IMAGE_TAG} ./${env.FRONT_DIR}"
+                    // Usamos --no-cache para asegurar que se use el build fresco de arriba
+                    bat "docker build --no-cache -t ${env.IMAGE_NAME}:${env.IMAGE_TAG} ./${env.FRONT_DIR}"
                     bat "docker push ${env.IMAGE_NAME}:${env.IMAGE_TAG}"
                 }
             }
@@ -63,19 +62,17 @@ pipeline {
             steps {
                 script {
                     dir("${env.FRONT_DIR}") {
-                        echo "--- Bajando pods y servicios antiguos para refrescar ---"
-                        // Eliminamos lo existente para asegurar una subida limpia
-                        bat "kubectl delete -f k8s/ --ignore-not-found=true"
-                        
-                        echo "--- Levantando servicios actualizados ---"
+                        echo "--- Actualizando configuración en K8s (Sin borrar recursos) ---"
+                        // 'apply' solo actualiza cambios, no borra datos de la DB
                         bat "kubectl apply -f k8s/ --validate=false"
                         
-                        // Opcional: Forzar el despliegue por si el nombre de la imagen no cambió
+                        echo "--- Reiniciando SOLO el servicio de frontend ---"
+                        // Esto fuerza a que el pod del frontend use la nueva imagen sin tocar a Keycloak
                         bat "kubectl rollout restart deployment frontend-service"
                     }
                     
-                    echo "--- Esperando salud de los pods ---"
-                    bat "kubectl wait --for=condition=ready pod -l app=frontend-service --timeout=120s"
+                    echo "--- Esperando que el frontend esté listo ---"
+                    bat "kubectl rollout status deployment frontend-service --timeout=120s"
                 }
             }
         }
@@ -87,7 +84,7 @@ pipeline {
             script { bat "docker logout" }
         }
         failure {
-            echo "Fallo en el pipeline. Revisa los logs de npm o kubectl."
+            echo "Fallo en el pipeline. Revisa los logs."
         }
     }
 }

@@ -6,8 +6,6 @@ pipeline {
         IMAGE_TAG  = "latest"
         DOCKER_CREDENTIAL_ID = 'dockerhub-creds'
         FRONT_DIR = "microservice-front" 
-        
-        // Definimos las IPs aquí para que sea fácil cambiarlas si tu Minikube cambia
         MINIKUBE_IP = "192.168.59.104"
     }
 
@@ -32,13 +30,18 @@ pipeline {
             steps {
                 dir("${env.FRONT_DIR}") {
                     script {
-                        // Inyectamos las variables que Vite necesita durante el build
+                        // Aquí inyectamos EXACTAMENTE las variables de tu .env
                         withEnv([
+                            "VITE_API_BASE_URL=http://${env.MINIKUBE_IP}:30080",
+                            "VITE_TINGESO_M_BACKEND_PORT=30080",
+                            "VITE_TINGESO_M_BACKEND_SERVER=${env.MINIKUBE_IP}",
                             "VITE_KEYCLOAK_URL=http://${env.MINIKUBE_IP}:31000",
-                            "VITE_GATEWAY_URL=http://${env.MINIKUBE_IP}:30080"
+                            "VITE_KEYCLOAK_REALM=tool_rent_M",
+                            "VITE_KEYCLOAK_CLIENT=mi-frontend"
                         ]) {
-                            echo "--- Instalando dependencias y compilando con variables de entorno ---"
+                            echo "--- Instalando dependencias ---"
                             bat "npm install"
+                            echo "--- Compilando (Las variables se graban en los archivos estáticos) ---"
                             bat "npm run build"
                         }
                     }
@@ -49,7 +52,7 @@ pipeline {
         stage('Build & Push Docker Image') {
             steps {
                 script {
-                    // Al construir la imagen DESPUÉS del build, el 'dist' ya lleva las IPs grabadas
+                    // Se construye la imagen con el contenido de 'dist' ya generado
                     bat "docker build -t ${env.IMAGE_NAME}:${env.IMAGE_TAG} ./${env.FRONT_DIR}"
                     bat "docker push ${env.IMAGE_NAME}:${env.IMAGE_TAG}"
                 }
@@ -60,15 +63,18 @@ pipeline {
             steps {
                 script {
                     dir("${env.FRONT_DIR}") {
-                        echo "--- Aplicando configuración de k8s ---"
+                        echo "--- Bajando pods y servicios antiguos para refrescar ---"
+                        // Eliminamos lo existente para asegurar una subida limpia
+                        bat "kubectl delete -f k8s/ --ignore-not-found=true"
+                        
+                        echo "--- Levantando servicios actualizados ---"
                         bat "kubectl apply -f k8s/ --validate=false"
                         
-                        echo "--- Forzando reinicio para actualizar imagen latest ---"
+                        // Opcional: Forzar el despliegue por si el nombre de la imagen no cambió
                         bat "kubectl rollout restart deployment frontend-service"
                     }
                     
                     echo "--- Esperando salud de los pods ---"
-                    bat "kubectl wait --for=condition=ready pod -l app=keycloak --timeout=180s"
                     bat "kubectl wait --for=condition=ready pod -l app=frontend-service --timeout=120s"
                 }
             }
@@ -81,7 +87,7 @@ pipeline {
             script { bat "docker logout" }
         }
         failure {
-            echo "Fallo en el pipeline. Revisa los logs de construcción de npm o la conexión con el clúster."
+            echo "Fallo en el pipeline. Revisa los logs de npm o kubectl."
         }
     }
 }

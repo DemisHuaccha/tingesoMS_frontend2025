@@ -38,6 +38,7 @@ pipeline {
                             "VITE_KEYCLOAK_REALM=tingeso-realm",
                             "VITE_KEYCLOAK_CLIENT=tingeso-front"
                         ]) {
+                            bat "echo La URL de Keycloak es: %VITE_KEYCLOAK_URL%"
                             echo "--- Instalando dependencias ---"
                             bat "npm install"
                             echo "--- Compilando frontend ---"

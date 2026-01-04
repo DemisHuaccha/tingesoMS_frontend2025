@@ -17,17 +17,12 @@ spec:
         image: quay.io/keycloak/keycloak:26.0.0
         args: ["start-dev"]
         env:
-        # 1. ACTIVAR ENDPOINTS DE SALUD (Esto arregla el 0/1)
         - name: KC_HEALTH_ENABLED
           value: "true"
-        
-        # 2. NUEVOS NOMBRES DE VARIABLES ADMIN (Para limpiar los logs)
         - name: KC_BOOTSTRAP_ADMIN_USERNAME
           value: admin
         - name: KC_BOOTSTRAP_ADMIN_PASSWORD
           value: admin
-
-        # 3. CONFIGURACIÓN DE BASE DE DATOS
         - name: KC_DB
           value: postgres
         - name: KC_DB_URL
@@ -36,28 +31,29 @@ spec:
           value: keycloak
         - name: KC_DB_PASSWORD
           value: keycloak
-
-        # 4. CONFIGURACIÓN DE RED PARA MINIKUBE
         - name: KC_HOSTNAME_STRICT
           value: "false"
         - name: KC_HTTP_ENABLED
           value: "true"
         
         ports:
-        - containerPort: 8080
+        - name: http
+          containerPort: 8080
+        - name: management
+          containerPort: 9000 # Definimos el puerto de gestión explícitamente
         
-        # 5. SONDAS AJUSTADAS (Más tolerantes para Minikube)
+        # SONDAS CORREGIDAS AL PUERTO 9000
         readinessProbe:
           httpGet:
             path: /health/ready
-            port: 8080
-          initialDelaySeconds: 60 # Keycloak tarda en procesar las tablas
+            port: 9000 # <--- CAMBIO CLAVE
+          initialDelaySeconds: 60
           periodSeconds: 10
           failureThreshold: 3
         livenessProbe:
           httpGet:
             path: /health/live
-            port: 8080
+            port: 9000 # <--- CAMBIO CLAVE
           initialDelaySeconds: 90
           periodSeconds: 20
           failureThreshold: 5

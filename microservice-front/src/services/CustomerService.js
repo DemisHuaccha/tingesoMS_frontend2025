@@ -1,5 +1,5 @@
 import axios from "axios";
-const apiBase = import.meta.env.VITE_API_BASE_URL + "/client/api/client";
+const apiBase = import.meta.env.VITE_API_BASE_URL + "/client";
 
 export const listCustomer = () => axios.get(apiBase + "/all");
 
@@ -11,4 +11,4 @@ export const searchCustomerRuts = (partialRut) => {
   return axios.get(`${apiBase}/search`, { params: { rut: partialRut } });
 };
 
-export const getDelayedClients = () => axios.get(`${apiBase}/getDelayedClients`);
+export const getDelayedClients = () => axios.get(import.meta.env.VITE_API_BASE_URL + "/report/delayed-clients");

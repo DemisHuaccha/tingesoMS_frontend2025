@@ -1,5 +1,5 @@
 import axios from "axios";
-const apiBase = import.meta.env.VITE_API_BASE_URL + "/loan/api/Loan";
+const apiBase = import.meta.env.VITE_API_BASE_URL + "/loan";
 
 export const listLoan = () => axios.get(apiBase + "/getAll");
 

@@ -19,9 +19,9 @@ const ReportsComponent = () => {
         // Assuming backend is open now, or we use keycloak token if we had access to it here.
         // For now, removing auth header as backend security is disabled.
 
-        axios.get(`${apiBase}/report/api/report/active`).then(res => setActiveLoans(res.data));
-        axios.get(`${apiBase}/report/api/report/delayed-clients`).then(res => setDelinquentClients(res.data));
-        axios.get(`${apiBase}/report/api/report/ranking`).then(res => setRanking(res.data));
+        axios.get(`${apiBase}/report/active`).then(res => setActiveLoans(res.data));
+        axios.get(`${apiBase}/report/delayed-clients`).then(res => setDelinquentClients(res.data));
+        axios.get(`${apiBase}/report/ranking`).then(res => setRanking(res.data));
     }, [apiBase]);
 
     return (

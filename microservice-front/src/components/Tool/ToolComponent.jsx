@@ -21,7 +21,7 @@ const ToolComponent = () => {
   const email = keycloak?.tokenParsed?.email;
 
   useEffect(() => {
-    fetch(`${apiBase}/tool/conditions`)
+    fetch(`${apiBase}/inventory/conditions`)
       .then((res) => {
         if (!res.ok) throw new Error("Error al obtener condiciones");
         return res.json();
@@ -36,26 +36,36 @@ const ToolComponent = () => {
   function saveTool(e) {
     e.preventDefault();
 
+    // Se procesa cada valor por separado para evitar el error de base numérica (radix)
+    const valReplacement = parseInt(replacementValue);
+    const valDamage = parseInt(damageValue);
+    const valFee = parseInt(loanFee);
+    const valPenalty = parseInt(penaltyForDelay);
+    const valQuantity = parseInt(quantity);
+
     const tool = {
       name,
       category,
-      replacementValue: parseInt(replacementValue),
-      damageValue: parseInt(damageValue),
-      loanFee: parseInt(loanFee),
-      penaltyForDelay: parseInt(penaltyForDelay),
+      replacementValue: valReplacement,
+      damageValue: valDamage,
+      loanFee: valFee,
+      penaltyForDelay: valPenalty,
       initialCondition,
-      quantity: parseInt(quantity),
+      quantity: valQuantity,
       email
     };
 
-    if (!Number.isInteger(parseInt(replacementValue, damageValue, loanFee, penaltyForDelay, quantity)) || parseInt(replacementValue, damageValue, loanFee, penaltyForDelay, quantity) <= 0) 
-      {alert('Positive Numbers only.');
-        return;}
+    // Se valida que todos los campos sean números válidos y mayores a 0
+    const values = [valReplacement, valDamage, valFee, valPenalty, valQuantity];
+    const hasError = values.some(val => isNaN(val) || val <= 0);
 
-    //console.log(tool);
+    if (hasError) {
+      alert('Positive Numbers only.');
+      return;
+    }
+
     createTool(tool)
       .then((response) => {
-        //console.log(response.data);
         navigator('/ListTools');
       })
       .catch((error) => {
@@ -104,7 +114,8 @@ const ToolComponent = () => {
                   className='form-control'
                   onChange={(e) => {
                     const value = e.target.value;
-                    if (/^\d*$/.test(value)) {setReplacementValue(value);}}}
+                    if (/^\d*$/.test(value)) { setReplacementValue(value); }
+                  }}
                 />
               </div>
 
@@ -116,9 +127,10 @@ const ToolComponent = () => {
                   placeholder='Enter Damage Value'
                   value={damageValue}
                   className='form-control'
-                  onChange={(e) => {    
+                  onChange={(e) => {
                     const value = parseInt(e.target.value);
-                    if (value > 0 || e.target.value === '') setDamageValue(e.target.value);}}
+                    if (value > 0 || e.target.value === '') setDamageValue(e.target.value);
+                  }}
                 />
               </div>
 
@@ -130,9 +142,10 @@ const ToolComponent = () => {
                   placeholder='Enter Loan Fee'
                   value={loanFee}
                   className='form-control'
-                  onChange={(e) => {    
+                  onChange={(e) => {
                     const value = parseInt(e.target.value);
-                    if (value > 0 || e.target.value === '') setLoanFee(e.target.value);}}
+                    if (value > 0 || e.target.value === '') setLoanFee(e.target.value);
+                  }}
                 />
               </div>
 
@@ -144,9 +157,10 @@ const ToolComponent = () => {
                   placeholder='Enter Penalty for Delay'
                   value={penaltyForDelay}
                   className='form-control'
-                  onChange={(e) => {    
+                  onChange={(e) => {
                     const value = parseInt(e.target.value);
-                    if (value > 0 || e.target.value === '') setPenaltyForDelay(e.target.value);}}
+                    if (value > 0 || e.target.value === '') setPenaltyForDelay(e.target.value);
+                  }}
                 />
               </div>
 
@@ -170,13 +184,14 @@ const ToolComponent = () => {
                 <label className='form-label'>Quantity</label>
                 <input
                   type='number'
-                  min='0' 
+                  min='0'
                   placeholder='Enter Quantity'
                   value={quantity}
                   className='form-control'
-                  onChange={(e) => {    
+                  onChange={(e) => {
                     const value = parseInt(e.target.value);
-                    if (value > 0 || e.target.value === '') setQuantity(e.target.value);}}
+                    if (value > 0 || e.target.value === '') setQuantity(e.target.value);
+                  }}
                 />
               </div>
 

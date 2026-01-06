@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { listLoan } from "../../services/LoanService";
 import { useNavigate } from 'react-router-dom';
 import { useKeycloak } from "@react-keycloak/web";
-import ReturnLoanOptions from "./ReturnLoanOptions"; // nuevo componente
+import ReturnLoanOptions from "./ReturnLoanOptions";
 
 export const ListLoanComponent = () => {
   const [loans, setLoans] = useState([]);
@@ -28,6 +28,8 @@ export const ListLoanComponent = () => {
   }
 
   function handleFinalizeClick(idLoan) {
+    // Verificación de seguridad para depuración
+    console.log("ID de préstamo seleccionado:", idLoan);
     setSelectedLoanId(idLoan);
     setShowOptions(true);
   }
@@ -52,8 +54,9 @@ export const ListLoanComponent = () => {
         </thead>
         <tbody>
           {loans.map((loan) => (
-            <tr key={loan.loanId}>
-              <td>{loan.loanId}</td>
+            // CAMBIO: Se usa loan.idLoan para coincidir con el backend
+            <tr key={loan.idLoan}>
+              <td>{loan.idLoan}</td>
               <td>{loan.deliveryDate}</td>
               <td>{loan.returnDate}</td>
               <td>{loan.clientRut}</td>
@@ -64,7 +67,10 @@ export const ListLoanComponent = () => {
               <td>{loan.priceToPay}</td>
               <td>
                 {loan.loanStatus && (
-                  <button className="btn btn-danger" onClick={() => handleFinalizeClick(loan.loanId)}>
+                  <button 
+                    className="btn btn-danger" 
+                    onClick={() => handleFinalizeClick(loan.idLoan)}
+                  >
                     Finalize loan
                   </button>
                 )}

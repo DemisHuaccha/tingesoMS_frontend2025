@@ -21,7 +21,7 @@ export const UpdateTool = () => {
   }, [tool, navigate]);
 
   useEffect(() => {
-    fetch(`${apiBase}/tool/conditions`)
+    fetch(`${apiBase}/inventory/conditions`)
       .then((res) => res.ok ? res.json() : Promise.reject("Failed to fetch conditions"))
       .then(setCondiciones)
       .catch((error) => {
@@ -34,8 +34,8 @@ export const UpdateTool = () => {
     const parsedValue = type === "number"
       ? Math.max(0, parseInt(value, 10) || 0)
       : type === "checkbox"
-      ? checked
-      : value;
+        ? checked
+        : value;
 
     setTool((prev) => ({ ...prev, [name]: parsedValue }));
   };

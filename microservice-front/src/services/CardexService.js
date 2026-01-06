@@ -1,5 +1,5 @@
 import axios from "axios";
-const apiBase = import.meta.env.VITE_API_BASE_URL + "/kardex/api/cardex";
+const apiBase = import.meta.env.VITE_API_BASE_URL + "/kardex";
 
 
 export const listCardex = () => axios.get(apiBase + "/getAll");
